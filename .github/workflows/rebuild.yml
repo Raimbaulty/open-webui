@@ -1,0 +1,30 @@
+name: Sync open-webui Image
+on:
+  schedule:
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        type: boolean
+        default: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - run: |
+          if [ "${{ github.event.inputs.force }}" != "true" ]; then
+            sudo apt-get update -q && sudo apt-get install -y -q skopeo jq
+            CREATED=$(skopeo inspect docker://ghcr.io/open-webui/open-webui:main | jq -r .Created)
+            HOURS=$(( ($(date +%s) - $(date -d "$CREATED" +%s)) / 3600 ))
+            [ $HOURS -gt 24 ] && exit 0
+          fi
+          
+          echo ${{ github.token }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          
+          REPO=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
+          docker pull ghcr.io/open-webui/open-webui:main
+          docker tag ghcr.io/open-webui/open-webui:main ghcr.io/$REPO/open-webui:main  
+          docker push ghcr.io/$REPO/open-webui:main
