@@ -4,27 +4,64 @@ on:
     - cron: '0 16 * * *'
   workflow_dispatch:
     inputs:
-      force:
-        type: boolean
+      force_sync:
+        description: '强制同步'
+        required: false
         default: false
+        type: boolean
+      check_hours:
+        description: '检查小时数'
+        required: false
+        default: '24'
+        type: string
 
 jobs:
-  sync:
+  build-and-push:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       packages: write
     steps:
-      - run: |
-          if [ "${{ github.event.inputs.force }}" != "true" ]; then
-            sudo apt-get update -q && sudo apt-get install -y -q skopeo jq
-            CREATED=$(skopeo inspect docker://ghcr.io/open-webui/open-webui:main | jq -r .Created)
-            HOURS=$(( ($(date +%s) - $(date -d "$CREATED" +%s)) / 3600 ))
-            [ $HOURS -gt 24 ] && exit 0
+      - name: Check if sync needed
+        id: check
+        run: |
+          FORCE_SYNC="${{ github.event.inputs.force_sync }}"
+          CHECK_HOURS="${{ github.event.inputs.check_hours || '24' }}"
+          
+          if [ "$FORCE_SYNC" = "true" ]; then
+            echo "need_sync=true" >> $GITHUB_OUTPUT
+            exit 0
           fi
           
-          echo ${{ github.token }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          if ! command -v skopeo >/dev/null 2>&1; then
+            sudo apt-get update -q
+            sudo apt-get install -y -q skopeo jq
+          fi
           
-          REPO=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
+          UPSTREAM_INFO=$(skopeo inspect docker://ghcr.io/open-webui/open-webui:main 2>/dev/null) || exit 1
+          CREATED_TIME=$(echo "$UPSTREAM_INFO" | jq -r .Created)
+          CREATED_TIMESTAMP=$(date -d "$CREATED_TIME" +%s)
+          CURRENT_TIMESTAMP=$(date +%s)
+          TIME_DIFF_HOURS=$(( (CURRENT_TIMESTAMP - CREATED_TIMESTAMP) / 3600 ))
+          
+          if [ $TIME_DIFF_HOURS -le $CHECK_HOURS ]; then
+            echo "need_sync=true" >> $GITHUB_OUTPUT
+          else
+            echo "need_sync=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Login to GHCR
+        if: steps.check.outputs.need_sync == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+          
+      - name: Sync image
+        if: steps.check.outputs.need_sync == 'true'
+        run: |
+          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           docker pull ghcr.io/open-webui/open-webui:main
-          docker tag ghcr.io/open-webui/open-webui:main ghcr.io/$REPO/open-webui:main  
-          docker push ghcr.io/$REPO/open-webui:main
+          docker tag ghcr.io/open-webui/open-webui:main ghcr.io/$OWNER_LOWER/open-webui:main
+          docker push ghcr.io/$OWNER_LOWER/open-webui:main
