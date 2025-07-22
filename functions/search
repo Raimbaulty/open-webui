@@ -1,0 +1,29 @@
+"""
+title: 联网搜索
+description: 为模型名称添加 -search 后缀开启联网搜索
+"""
+
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any
+
+
+class Filter:
+    class Valves(BaseModel):
+        priority: int = Field(default=100, description="优先级")
+        pass
+
+    def __init__(self):
+        self.valves = self.Valves()
+        self.toggle = True
+        self.icon = """data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjc1IiBzdHJva2U9ImN1cnJlbnRDb2xvciIgY2xhc3M9InNpemUtNSI+PHBhdGggc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBkPSJNMTIgMjFhOS4wMDQgOS4wMDQgMCAwIDAgOC43MTYtNi43NDdNMTIgMjFhOS4wMDQgOS4wMDQgMCAwIDEtOC43MTYtNi43NDdNMTIgMjFjMi40ODUgMCA0LjUtNC4wMyA0LjUtOVMxNC40ODUgMyAxMiAzbTAgMThjLTIuNDg1IDAtNC41LTQuMDMtNC41LTlTOS41MTUgMyAxMiAzbTAgMGE4Ljk5NyA4Ljk5NyAwIDAgMSA3Ljg0MyA0LjU4Mk0xMiAzYTguOTk3IDguOTk3IDAgMCAwLTcuODQzIDQuNTgybTE1LjY4NiAwQTExLjk1MyAxMS45NTMgMCAwIDEgMTIgMTAuNWMtMi45OTggMC01Ljc0LTEuMS03Ljg0My0yLjkxOG0xNS42ODYgMEE4Ljk1OSA4Ljk1OSAwIDAgMSAyMSAxMmMwIC43NzgtLjA5OSAxLjUzMy0uMjg0IDIuMjUzbTAgMEExNy45MTkgMTcuOTE5IDAgMCAxIDEyIDE2LjVjLTMuMTYyIDAtNi4xMzMtLjgxNS04LjcxNi0yLjI0N20wIDBBOS4wMTUgOS4wMTUgMCAwIDEgMyAxMmMwLTEuNjA1LjQyLTMuMTEzIDEuMTU3LTQuNDE4Ij48L3BhdGg+PC9zdmc+"""
+        pass
+
+    def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
+        model_name = body.get("model")
+        if isinstance(model_name, str):
+            if model_name.startswith("gemini"):
+                # 检查模型名称是否已经包含"-search"后缀
+                if not model_name.endswith("-search"):
+                    # 在模型名称后面添加"-search"后缀
+                    body["model"] = model_name + "-search"
+        return body
