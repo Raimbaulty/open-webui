@@ -1,0 +1,44 @@
+"""
+title: 深度思考
+description: 为模型名称添加 -think-xxx 后缀顶格思考
+"""
+
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any
+
+
+class Filter:
+    class Valves(BaseModel):
+        priority: int = Field(default=100, description="优先级")
+        pass
+
+    def __init__(self):
+        self.valves = self.Valves()
+        self.toggle = True
+        self.icon = """data:image/svg+xml;charset=utf-8;base64,PHN2ZyB0PSIxNzU1MTY3NDExOTQ4IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjU4OTciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48cGF0aCBkPSJNMzYyLjY2NjY2NyA4NS4zMzMzMzNhMTQ5LjMzMzMzMyAxNDkuMzMzMzMzIDAgMCAwLTE0Ny42MjY2NjcgMTcxLjk0NjY2N0ExNDkuMzMzMzMzIDE0OS4zMzMzMzMgMCAwIDAgMTMwLjEzMzMzMyA1MTJhMTQ5LjMzMzMzMyAxNDkuMzMzMzMzIDAgMCAwIDQxLjA4OCAyNDEuOTJBMTcwLjY2NjY2NyAxNzAuNjY2NjY3IDAgMCAwIDQ2OS4zMzMzMzMgODgwLjg5NmwwLjA0MjY2Ny03NTAuNzYyNjY3QTE0OC45MDY2NjcgMTQ4LjkwNjY2NyAwIDAgMCAzNjIuNjY2NjY3IDg1LjMzMzMzM3pNNTU0LjY2NjY2NyAxMzAuMTMzMzMzdjc1MC43NjI2NjdhMTcwLjY2NjY2NyAxNzAuNjY2NjY3IDAgMCAwIDI5OC4wNjkzMzMtMTI3LjAxODY2N0ExNDkuMzMzMzMzIDE0OS4zMzMzMzMgMCAwIDAgODkzLjg2NjY2NyA1MTJhMTQ5LjMzMzMzMyAxNDkuMzMzMzMzIDAgMCAwLTg0LjkwNjY2Ny0yNTQuNzJBMTQ5LjMzMzMzMyAxNDkuMzMzMzMzIDAgMCAwIDU1NC42NjY2NjcgMTMwLjEzMzMzM3oiIGZpbGw9IiMwMDAwMDAiIHAtaWQ9IjU4OTgiPjwvcGF0aD48L3N2Zz4="""
+        pass
+
+    def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
+        model_name = body.get("model")
+        
+        # 确保model_name是字符串且不包含-think-，以防止重复添加
+        if isinstance(model_name, str) and "-think-" not in model_name:
+            
+            # 检查是否有-search后缀
+            has_search_suffix = model_name.endswith("-search")
+            # 根据是否有-search后缀，获取基础模型名称
+            base_name = model_name[:-7] if has_search_suffix else model_name
+            
+            # 根据基础模型名称确定think后缀
+            if base_name == "gemini-2.5-pro":
+                think_suffix = "-think-32768"
+            else:
+                think_suffix = "-think-24576"
+
+            # 重新构建模型名称
+            if has_search_suffix:
+                body["model"] = base_name + think_suffix + "-search"
+            else:
+                body["model"] = base_name + think_suffix
+                
+        return body
